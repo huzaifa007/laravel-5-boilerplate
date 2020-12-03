@@ -2,8 +2,8 @@
 
 namespace App\Providers;
 
+use App\Domains\Announcement\Services\AnnouncementService;
 use Illuminate\Support\Facades\View;
-use App\Http\Composers\GlobalComposer;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -14,34 +14,20 @@ class ComposerServiceProvider extends ServiceProvider
     /**
      * Register bindings in the container.
      *
-     * @return void
+     * @param  AnnouncementService  $announcementService
      */
-    public function boot()
+    public function boot(AnnouncementService $announcementService)
     {
-        /*
-         * Global
-         */
-        View::composer(
-            // This class binds the $logged_in_user variable to every view
-            '*', GlobalComposer::class
-        );
+        View::composer('*', function ($view) {
+            $view->with('logged_in_user', auth()->user());
+        });
 
-        /*
-         * Frontend
-         */
+        View::composer(['frontend.index', 'frontend.layouts.app'], function ($view) use ($announcementService) {
+            $view->with('announcements', $announcementService->getForFrontend());
+        });
 
-        /*
-         * Backend
-         */
-    }
-
-    /**
-     * Register the service provider.
-     *
-     * @return void
-     */
-    public function register()
-    {
-        //
+        View::composer(['backend.layouts.app'], function ($view) use ($announcementService) {
+            $view->with('announcements', $announcementService->getForBackend());
+        });
     }
 }

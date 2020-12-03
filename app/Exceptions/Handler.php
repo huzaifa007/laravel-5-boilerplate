@@ -2,36 +2,35 @@
 
 namespace App\Exceptions;
 
-use Exception;
-use Illuminate\Auth\AuthenticationException;
-use Illuminate\Session\TokenMismatchException;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Spatie\Permission\Exceptions\UnauthorizedException;
+use Throwable;
 
+/**
+ * Class Handler.
+ */
 class Handler extends ExceptionHandler
 {
     /**
-     * A list of the exception types that should not be reported.
+     * A list of the exception types that are not reported.
      *
      * @var array
      */
     protected $dontReport = [
-        \Illuminate\Auth\AuthenticationException::class,
-        \Illuminate\Auth\Access\AuthorizationException::class,
-        \Symfony\Component\HttpKernel\Exception\HttpException::class,
-        \Illuminate\Database\Eloquent\ModelNotFoundException::class,
-        \Illuminate\Session\TokenMismatchException::class,
-        \Illuminate\Validation\ValidationException::class,
+        GeneralException::class,
     ];
 
     /**
      * Report or log an exception.
      *
-     * This is a great spot to send exceptions to Sentry, Bugsnag, etc.
-     *
-     * @param  \Exception  $exception
+     * @param  \Throwable  $exception
      * @return void
+     *
+     * @throws \Throwable
      */
-    public function report(Exception $exception)
+    public function report(Throwable $exception)
     {
         parent::report($exception);
     }
@@ -40,42 +39,31 @@ class Handler extends ExceptionHandler
      * Render an exception into an HTTP response.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  \Exception  $exception
-     * @return \Illuminate\Http\Response
+     * @param  \Throwable  $exception
+     * @return \Symfony\Component\HttpFoundation\Response
+     *
+     * @throws \Throwable
      */
-    public function render($request, Exception $exception)
+    public function render($request, Throwable $exception)
     {
-        /*
-         * Redirect if token mismatch error
-         * Usually because user stayed on the same screen too long and their session expired
-         */
-        if ($exception instanceof TokenMismatchException) {
-            return redirect()->route('frontend.auth.login');
+        if ($exception instanceof UnauthorizedException) {
+            return redirect()
+                ->route(homeRoute())
+                ->withFlashDanger(__('You do not have access to do that.'));
         }
 
-        /*
-         * All instances of GeneralException redirect back with a flash message to show a bootstrap alert-error
-         */
-        if ($exception instanceof GeneralException) {
-            return redirect()->back()->withInput()->withFlashDanger($exception->getMessage());
+        if ($exception instanceof AuthorizationException) {
+            return redirect()
+                ->back()
+                ->withFlashDanger($exception->getMessage() ?? __('You do not have access to do that.'));
+        }
+
+        if ($exception instanceof ModelNotFoundException) {
+            return redirect()
+                ->route(homeRoute())
+                ->withFlashDanger(__('The requested resource was not found.'));
         }
 
         return parent::render($request, $exception);
-    }
-
-    /**
-     * Convert an authentication exception into an unauthenticated response.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Illuminate\Auth\AuthenticationException  $exception
-     * @return \Illuminate\Http\Response
-     */
-    protected function unauthenticated($request, AuthenticationException $exception)
-    {
-        if ($request->expectsJson()) {
-            return response()->json(['error' => 'Unauthenticated.'], 401);
-        }
-
-        return redirect()->guest(route('frontend.auth.login'));
     }
 }

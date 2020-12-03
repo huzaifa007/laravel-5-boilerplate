@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Frontend\User;
 
+use App\Domains\Auth\Services\UserService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Frontend\User\UpdateProfileRequest;
-use App\Repositories\Frontend\Access\User\UserRepository;
 
 /**
  * Class ProfileController.
@@ -12,36 +12,19 @@ use App\Repositories\Frontend\Access\User\UserRepository;
 class ProfileController extends Controller
 {
     /**
-     * @var UserRepository
-     */
-    protected $user;
-
-    /**
-     * ProfileController constructor.
-     *
-     * @param UserRepository $user
-     */
-    public function __construct(UserRepository $user)
-    {
-        $this->user = $user;
-    }
-
-    /**
-     * @param UpdateProfileRequest $request
+     * @param  UpdateProfileRequest  $request
+     * @param  UserService  $userService
      *
      * @return mixed
      */
-    public function update(UpdateProfileRequest $request)
+    public function update(UpdateProfileRequest $request, UserService $userService)
     {
-        $output = $this->user->updateProfile(access()->id(), $request->only('name', 'email'));
+        $userService->updateProfile($request->user(), $request->validated());
 
-        // E-mail address was updated, user has to reconfirm
-        if (is_array($output) && $output['email_changed']) {
-            access()->logout();
-
-            return redirect()->route('frontend.auth.login')->withFlashInfo(trans('strings.frontend.user.email_changed_notice'));
+        if (session()->has('resent')) {
+            return redirect()->route('frontend.auth.verification.notice')->withFlashInfo(__('You must confirm your new e-mail address before you can go any further.'));
         }
 
-        return redirect()->route('frontend.user.account')->withFlashSuccess(trans('strings.frontend.user.profile_updated'));
+        return redirect()->route('frontend.user.account', ['#information'])->withFlashSuccess(__('Profile successfully updated.'));
     }
 }

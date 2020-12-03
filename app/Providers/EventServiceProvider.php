@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Domains\Auth\Listeners\RoleEventListener;
+use App\Domains\Auth\Listeners\UserEventListener;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 /**
@@ -14,7 +18,11 @@ class EventServiceProvider extends ServiceProvider
      *
      * @var array
      */
-    protected $listen = [];
+    protected $listen = [
+        Registered::class => [
+            SendEmailVerificationNotification::class,
+        ],
+    ];
 
     /**
      * Class event subscribers.
@@ -22,24 +30,8 @@ class EventServiceProvider extends ServiceProvider
      * @var array
      */
     protected $subscribe = [
-        /*
-         * Frontend Subscribers
-         */
-
-        /*
-         * Auth Subscribers
-         */
-        \App\Listeners\Frontend\Auth\UserEventListener::class,
-
-        /*
-         * Backend Subscribers
-         */
-
-        /*
-         * Access Subscribers
-         */
-        \App\Listeners\Backend\Access\User\UserEventListener::class,
-        \App\Listeners\Backend\Access\Role\RoleEventListener::class,
+        RoleEventListener::class,
+        UserEventListener::class,
     ];
 
     /**

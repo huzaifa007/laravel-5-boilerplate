@@ -1,5 +1,4 @@
-const { mix } = require('laravel-mix');
-const WebpackRTLPlugin = require('webpack-rtl-plugin');
+const mix = require('laravel-mix');
 
 /*
  |--------------------------------------------------------------------------
@@ -12,21 +11,28 @@ const WebpackRTLPlugin = require('webpack-rtl-plugin');
  |
  */
 
-mix.sass('resources/assets/sass/frontend/app.scss', 'public/css/frontend.css')
-    .sass('resources/assets/sass/backend/app.scss', 'public/css/backend.css')
-    .js([
-        'resources/assets/js/frontend/app.js',
-        'resources/assets/js/plugin/sweetalert/sweetalert.min.js',
-        'resources/assets/js/plugins.js'
-    ], 'public/js/frontend.js')
-    .js([
-        'resources/assets/js/backend/app.js',
-        'resources/assets/js/plugin/sweetalert/sweetalert.min.js',
-        'resources/assets/js/plugins.js'
-    ], 'public/js/backend.js')
-    .webpackConfig({
-        plugins: [
-            new WebpackRTLPlugin('/css/[name].rtl.css')
-        ]
-    })
-    .version();
+mix.setPublicPath('public')
+    .setResourceRoot('../') // Turns assets paths in css relative to css file
+    .sass('resources/sass/frontend/app.scss', 'css/frontend.css')
+    .sass('resources/sass/backend/app.scss', 'css/backend.css')
+    .js('resources/js/frontend/app.js', 'js/frontend.js')
+    .js('resources/js/backend/app.js', 'js/backend.js')
+    .extract([
+        'alpinejs',
+        'jquery',
+        'bootstrap',
+        'popper.js',
+        'axios',
+        'sweetalert2',
+        'lodash'
+    ])
+    .sourceMaps();
+
+if (mix.inProduction()) {
+    mix.version();
+} else {
+    // Uses inline source-maps on development
+    mix.webpackConfig({
+        devtool: 'inline-source-map'
+    });
+}
